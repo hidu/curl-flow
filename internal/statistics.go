@@ -11,48 +11,68 @@ import (
 
 type Statistics struct {
 	StartTime        time.Time
+	RsChan chan *RequestStatus
+	Concurrency int
 	RequestDone      uint64
 	ResponseSize     uint64
 	StatusAll        map[int]uint64
 	LastMinuteStatus []*RequestStatus
 	rw               sync.RWMutex
+	workerWg               sync.WaitGroup
 }
 
-func NewStatistics() *Statistics {
-	return &Statistics{
+func NewStatistics(concurrency int) *Statistics {
+	s:=&Statistics{
 		StartTime:    time.Now(),
 		StatusAll:    make(map[int]uint64),
 		RequestDone:  0,
 		ResponseSize: 0,
+		Concurrency : concurrency,
+		RsChan: make(chan *RequestStatus,2*concurrency),
 	}
+	s.workerWg.Add(1)
+	go s.addStatusWorker()
+	
+	return s
 }
 
 func (s *Statistics) Stop() {
-
+	close(s.RsChan)
+	s.workerWg.Wait()
 }
 
-func (s *Statistics) AddStatus(rs *RequestStatus) {
-	s.rw.Lock()
-	defer s.rw.Unlock()
-	s.RequestDone++
-	statusCode := rs.StatusCode
-
-	if _, has := s.StatusAll[statusCode]; !has {
-		s.StatusAll[statusCode] = 0
-	}
-	s.StatusAll[statusCode]++
-
-	s.LastMinuteStatus = append(s.LastMinuteStatus, rs)
-	var expirePos int
-	for i, v := range s.LastMinuteStatus {
-		expirePos = i
-		if !v.IsExpire() {
-			break
+func (s *Statistics) addStatusWorker() {
+	deal:=func(rs *RequestStatus){
+		s.rw.Lock()
+		defer s.rw.Unlock()
+		s.RequestDone++
+		statusCode := rs.StatusCode
+	
+		if _, has := s.StatusAll[statusCode]; !has {
+			s.StatusAll[statusCode] = 0
+		}
+		s.StatusAll[statusCode]++
+	
+		s.LastMinuteStatus = append(s.LastMinuteStatus, rs)
+		var expirePos int
+		for i, v := range s.LastMinuteStatus {
+			expirePos = i
+			if !v.IsExpire() {
+				break
+			}
+		}
+		if expirePos > 0 {
+			s.LastMinuteStatus = s.LastMinuteStatus[expirePos:]
 		}
 	}
-	if expirePos > 0 {
-		s.LastMinuteStatus = s.LastMinuteStatus[expirePos:]
+	
+	for rs:=range s.RsChan{
+		deal(rs)
 	}
+   s.workerWg.Done()
+}
+func (s *Statistics) AddStatus(rs *RequestStatus) {
+	s.RsChan<-rs
 }
 
 func (s *Statistics) AddResponseSize(size int) {
@@ -114,7 +134,7 @@ func (s *Statistics) StatusTxt() string {
 	bs_all, _ := json.Marshal(s.StatusAll)
 	s.rw.RUnlock()
 
-	msg = append(msg, fmt.Sprintf("qps_total=%.1f", s.TotalQps()))
+	msg = append(msg, fmt.Sprintf("qps_avg=%.1f", s.TotalQps()))
 	msg = append(msg, fmt.Sprintf("qps_minute=%.1f", s.MinuteQps()))
 
 	msg = append(msg, fmt.Sprintf("status_all=%s", strings.Replace(string(bs_all), `"`, "", -1)))

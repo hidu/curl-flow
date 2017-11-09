@@ -11,8 +11,8 @@ import (
 )
 
 var conc = flag.Int("c", 1, "concurrency Number of multiple requests to make")
-var url = flag.String("url", "", "test url")
-var n = flag.Int("n", 0, "Number of requests to perform")
+var url = flag.String("url", "", "test url,When no flow is used")
+var n = flag.Int("n", 1, "Number of requests to perform,not for flow")
 var t = flag.Uint("t", 10, "Timeout of request")
 var useUi = flag.Bool("ui", false, "use termui")
 

@@ -19,13 +19,14 @@ type Client struct {
 
 	logErrTime time.Time
 	logErrRw   sync.RWMutex
+	workerWg sync.WaitGroup
 }
 
 func NewClient(concurrency int) *Client {
 	cs := &Client{
 		reqsChan:    make(chan *http.Request, concurrency*10),
 		concurrency: concurrency,
-		statistics:  NewStatistics(),
+		statistics:  NewStatistics(concurrency),
 		logErrTime:  time.Now(),
 	}
 	return cs
@@ -45,6 +46,7 @@ func (c *Client) NextRequest() *http.Request {
 
 func (c *Client) Start() {
 	for i := 0; i < c.concurrency; i++ {
+		c.workerWg.Add(1)
 		go c.worker(c.reqsChan, i)
 	}
 	time_util.SetInterval(func() {
@@ -61,7 +63,8 @@ func (c *Client) UI() *UI {
 
 func (c *Client) Wait() {
 	close(c.reqsChan)
-	time.Sleep(10 * time.Second)
+	c.workerWg.Wait()
+	c.statistics.Stop()
 	c.PrintStatistics()
 }
 
@@ -92,6 +95,7 @@ func (c *Client) worker(jobs <-chan *http.Request, worker_id int) {
 			c.logError(resp.StatusCode, string(bd))
 		}
 	}
+	c.workerWg.Done()
 }
 
 func (c *Client) logError(statusCode int, resp string) {
