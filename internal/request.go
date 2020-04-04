@@ -13,6 +13,7 @@ type Request struct {
 	Method   string            `json:"method"`
 	Header   map[string]string `json:"header"`
 	Playload string            `json:"playload"`
+	raw      string            `json:"-"`
 }
 
 func NewRequest(urlStr string, method string) *Request {
@@ -20,12 +21,14 @@ func NewRequest(urlStr string, method string) *Request {
 		Url:    urlStr,
 		Method: method,
 		Header: make(map[string]string),
+		raw:    fmt.Sprintf("url=%s,method=%s", urlStr, method),
 	}
 }
 
 func NewRequestJson(bs []byte) (*Request, error) {
 	var r *Request
 	err := json.Unmarshal(bs, &r)
+	r.raw = string(bs)
 	return r, err
 }
 
@@ -42,5 +45,14 @@ func (r *Request) AsHttpRequest() (*http.Request, error) {
 	for k, v := range r.Header {
 		req.Header.Set(k, v)
 	}
+	host := req.Header.Get("Host")
+	if host != "" {
+		req.Host = host
+	}
+
 	return req, nil
+}
+
+func (r *Request) Raw() string {
+	return r.raw
 }

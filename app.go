@@ -4,23 +4,25 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/hidu/curl-flow/internal"
 	"io"
 	"log"
 	"os"
+
+	"github.com/hidu/curl-flow/internal"
 )
 
 var conc = flag.Int("c", 1, "concurrency Number of multiple requests to make")
 var url = flag.String("url", "", "test url,When no flow is used")
-var n = flag.Int("n", 1, "Number of requests to perform,not for flow")
-var t = flag.Uint("t", 10, "Timeout of request")
+var n = flag.Int("n", 1, "Number of requests to perform")
+var t = flag.Uint("t", 10, "Timeout of request (second)")
 var useUi = flag.Bool("ui", false, "use termui")
+var detail = flag.Bool("detail", false, "print request detail to log")
 
 func main() {
 	flag.Parse()
 	fmt.Println("start")
 
-	client := internal.NewClient(*conc)
+	client := internal.NewClient(*conc, *detail)
 	client.SetTimeout(int(*t))
 	client.Start()
 
@@ -34,12 +36,12 @@ func main() {
 
 	if *url != "" {
 		req := internal.NewRequest(*url, "GET")
-		r, _ := req.AsHttpRequest()
 		for i := 0; i < *n; i++ {
-			client.AddRequest(r)
+			client.AddRequest(req)
 		}
 	} else {
 		buf := bufio.NewReaderSize(os.Stdin, 8192)
+		reqId := 0
 		for {
 			line, err := buf.ReadBytes('\n')
 			if err == io.EOF {
@@ -51,8 +53,15 @@ func main() {
 				log.Println("parse request failed:", jerr, ",input:", string(line))
 				continue
 			}
-			r, _ := req.AsHttpRequest()
-			client.AddRequest(r)
+
+			for i := 0; i < *n; i++ {
+				client.AddRequest(req)
+				reqId++
+			}
+
+			// 			if(*n > 1 && reqId >= *n){
+			// 				break
+			// 			}
 		}
 	}
 

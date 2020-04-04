@@ -2,16 +2,17 @@ package internal
 
 import (
 	"fmt"
-	"github.com/hidu/goutils/time_util"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/hidu/goutils/time_util"
 )
 
 type Client struct {
-	reqsChan    chan *http.Request
+	reqsChan    chan *Request
 	statistics  *Statistics
 	timeout     time.Duration
 	concurrency int
@@ -19,20 +20,23 @@ type Client struct {
 
 	logErrTime time.Time
 	logErrRw   sync.RWMutex
-	workerWg sync.WaitGroup
+	workerWg   sync.WaitGroup
+
+	needDetail bool
 }
 
-func NewClient(concurrency int) *Client {
+func NewClient(concurrency int, detail bool) *Client {
 	cs := &Client{
-		reqsChan:    make(chan *http.Request, concurrency*10),
+		reqsChan:    make(chan *Request, concurrency*10),
 		concurrency: concurrency,
 		statistics:  NewStatistics(concurrency),
 		logErrTime:  time.Now(),
+		needDetail:  detail,
 	}
 	return cs
 }
 
-func (c *Client) AddRequest(req *http.Request) {
+func (c *Client) AddRequest(req *Request) {
 	c.reqsChan <- req
 }
 
@@ -40,7 +44,7 @@ func (c *Client) SetTimeout(sec int) {
 	c.timeout = time.Duration(sec) * time.Second
 }
 
-func (c *Client) NextRequest() *http.Request {
+func (c *Client) NextRequest() *Request {
 	return <-c.reqsChan
 }
 
@@ -68,18 +72,27 @@ func (c *Client) Wait() {
 	c.PrintStatistics()
 }
 
-func (c *Client) worker(jobs <-chan *http.Request, worker_id int) {
+func (c *Client) worker(jobs <-chan *Request, worker_id int) {
 	for req := range jobs {
 		client := &http.Client{
 			Timeout: c.timeout,
 		}
 		s := NewRequestStatus()
-
-		resp, err := client.Do(req)
+		hReq, err := req.AsHttpRequest()
 
 		if err != nil {
 			s.Status(0)
 			c.statistics.AddStatus(s)
+			c.logError(0, req.Raw(), "")
+			continue
+		}
+
+		resp, err := client.Do(hReq)
+
+		if err != nil {
+			s.Status(0)
+			c.statistics.AddStatus(s)
+			c.logError(0, req.Raw(), "")
 			continue
 		}
 
@@ -92,18 +105,22 @@ func (c *Client) worker(jobs <-chan *http.Request, worker_id int) {
 		c.statistics.AddResponseSize(len(bd))
 
 		if resp.StatusCode != http.StatusOK {
-			c.logError(resp.StatusCode, string(bd))
+			c.logError(resp.StatusCode, req.Raw(), string(bd))
+		}
+
+		if c.needDetail {
+			log.Println("request_detail", req.Raw(), string(bd))
 		}
 	}
 	c.workerWg.Done()
 }
 
-func (c *Client) logError(statusCode int, resp string) {
+func (c *Client) logError(statusCode int, req string, resp string) {
 	now := time.Now()
 	if now.Sub(c.logErrTime).Seconds() < 5 {
 		return
 	}
-	log.Println("faild_request_sample,status=", statusCode, "resp:", resp)
+	log.Println("faild_request_sample,status=", statusCode, "request=", req, "response=", resp)
 	c.logErrRw.Lock()
 	defer c.logErrRw.Unlock()
 	c.logErrTime = now
