@@ -9,11 +9,11 @@ import (
 )
 
 type Request struct {
-	Url      string            `json:"url"`
-	Method   string            `json:"method"`
-	Header   map[string]string `json:"header"`
-	Playload string            `json:"playload"`
-	raw      string            `json:"-"`
+	Url     string            `json:"url"`
+	Method  string            `json:"method"`
+	Header  map[string]string `json:"header"`
+	Payload string            `json:"payload"`
+	raw     string            `json:"-"`
 }
 
 func NewRequest(urlStr string, method string) *Request {
@@ -21,7 +21,7 @@ func NewRequest(urlStr string, method string) *Request {
 		Url:    urlStr,
 		Method: method,
 		Header: make(map[string]string),
-		raw:    fmt.Sprintf("url=%s,method=%s", urlStr, method),
+		raw:    fmt.Sprintf("url=%s, method=%s", urlStr, method),
 	}
 }
 
@@ -38,7 +38,7 @@ func (r *Request) BasicAuth(name, psw string) {
 }
 
 func (r *Request) AsHttpRequest() (*http.Request, error) {
-	req, err := http.NewRequest(r.Method, r.Url, strings.NewReader(r.Playload))
+	req, err := http.NewRequest(r.Method, r.Url, strings.NewReader(r.Payload))
 	if err != nil {
 		return nil, err
 	}

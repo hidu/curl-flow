@@ -143,7 +143,7 @@ func (s *Statistics) StatusTxt() string {
 	msg = append(msg, fmt.Sprintf("status_minute=%s", strings.Replace(string(bs_minute), `"`, "", -1)))
 	// 	msg=append(msg,fmt.Sprintf("resp_size=%d", s.ResponseSize))
 
-	return strings.Join(msg, ",")
+	return strings.Join(msg, ", ")
 }
 
 type RequestStatus struct {

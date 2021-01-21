@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/hidu/goutils/time_util"
 )
 
 type Client struct {
@@ -53,10 +51,11 @@ func (c *Client) Start() {
 		c.workerWg.Add(1)
 		go c.worker(c.reqsChan, i)
 	}
-	time_util.SetInterval(func() {
-		c.PrintStatistics()
-	}, 5)
-
+	go func() {
+		for range time.Tick(5 * time.Second) {
+			c.PrintStatistics()
+		}
+	}()
 }
 func (c *Client) UI() *UI {
 	if c.ui == nil {
@@ -72,7 +71,7 @@ func (c *Client) Wait() {
 	c.PrintStatistics()
 }
 
-func (c *Client) worker(jobs <-chan *Request, worker_id int) {
+func (c *Client) worker(jobs <-chan *Request, workerID int) {
 	for req := range jobs {
 		client := &http.Client{
 			Timeout: c.timeout,
@@ -120,13 +119,13 @@ func (c *Client) logError(statusCode int, req string, resp string) {
 	if now.Sub(c.logErrTime).Seconds() < 5 {
 		return
 	}
-	log.Println("faild_request_sample,status=", statusCode, "request=", req, "response=", resp)
+	log.Println("failed_request_sample, status=", statusCode, "request=", req, "response=", resp)
 	c.logErrRw.Lock()
 	defer c.logErrRw.Unlock()
 	c.logErrTime = now
 }
 
 func (c *Client) PrintStatistics() {
-	msg := fmt.Sprintf("conc=%d,%s", c.concurrency, c.statistics.StatusTxt())
+	msg := fmt.Sprintf("conc=%d, %s", c.concurrency, c.statistics.StatusTxt())
 	log.Println(msg)
 }

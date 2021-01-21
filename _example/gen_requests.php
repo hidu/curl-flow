@@ -10,6 +10,6 @@ for($i=0;$i<10000;$i++){
         'Content-Type'=>'application/x-www-form-urlencoded',
         'head-a'=>'head-v',
     );
-    $req['playload']=http_build_query(array('id'=>$i,'now'=>time()));
+    $req['payload']=http_build_query(array('id'=>$i,'now'=>time()));
     echo json_encode($req)."\n";
 }

@@ -11,6 +11,8 @@ import (
 	"github.com/hidu/curl-flow/internal"
 )
 
+const version = "20210121"
+
 var conc = flag.Int("c", 1, "concurrency Number of multiple requests to make")
 var url = flag.String("url", "", "test url,When no flow is used")
 var n = flag.Int("n", 1, "Number of requests to perform")
@@ -18,9 +20,18 @@ var t = flag.Uint("t", 10, "Timeout of request (second)")
 var useUi = flag.Bool("ui", false, "use termui")
 var detail = flag.Bool("detail", false, "print request detail to log")
 
+func init() {
+	df := flag.Usage
+	flag.Usage = func() {
+		df()
+		fmt.Println("\n    site : https://github.com/hidu/curl-flow")
+		fmt.Println(" version :", version)
+	}
+}
+
 func main() {
 	flag.Parse()
-	fmt.Println("start")
+	log.Println("start")
 
 	client := internal.NewClient(*conc, *detail)
 	client.SetTimeout(int(*t))
@@ -66,4 +77,5 @@ func main() {
 	}
 
 	client.Wait()
+	log.Println("stopped")
 }

@@ -3,7 +3,7 @@ package internal
 import (
 	"fmt"
 
-	"github.com/gizak/termui"
+	"gopkg.in/gizak/termui.v2"
 )
 
 type UI struct {
