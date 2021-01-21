@@ -1,7 +1,7 @@
 <?php
 //build requests
 
-for($i=0;$i<10000;$i++){
+for($i=0;$i<2;$i++){
     $req=array();
     $req['url']='http://127.0.0.1:8088/test.php?i='.$i;
     

@@ -15,7 +15,7 @@ const version = "20210121"
 
 var conc = flag.Int("c", 1, "concurrency Number of multiple requests to make")
 var url = flag.String("url", "", "test url,When no flow is used")
-var n = flag.Int("n", 1, "Number of requests to perform")
+var n = flag.Int("n", 1, "Number of each requests to perform")
 var t = flag.Uint("t", 10, "Timeout of request (second)")
 var useUi = flag.Bool("ui", false, "use termui")
 var detail = flag.Bool("detail", false, "print request detail to log")

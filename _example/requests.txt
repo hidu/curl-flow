@@ -1,0 +1,2 @@
+{"url":"http:\/\/127.0.0.1:8088\/test.php?i=0","method":"post","header":{"Content-Type":"application\/x-www-form-urlencoded","head-a":"head-v"},"payload":"id=0&now=1611202835"}
+{"url":"http:\/\/127.0.0.1:8088\/test.php?i=1","method":"post","header":{"Content-Type":"application\/x-www-form-urlencoded","head-a":"head-v"},"payload":"id=1&now=1611202835"}
